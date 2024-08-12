@@ -88,27 +88,14 @@ pub struct ChatRecord {
         "state": "00000000-0000-0000-0000-000000000000"
     })
 ))]
+
 pub struct ChatRequest {
     messages: Array<ChatRecord>,
     names: HashMap<Role, String>,
     state: StateId,
     #[derivative(Default(value = "256"))]
     max_tokens: usize,
-    #[derivative(Default(value = "Array::Vec(vec![\
-    \"\\n\\nUser\".to_string(), \
-    \"\\n\\nQuestion\".to_string(), \
-    \"\\n\\nQ\".to_string(), \
-    \"\\n\\nHuman\".to_string(), \
-    \"\\n\\nBob\".to_string(), \
-    \"\\n\\nAssistant\".to_string(), \
-    \"\\n\\nAnswer\".to_string(), \
-    \"\\n\\nA\".to_string(), \
-    \"\\n\\nBot\".to_string(), \
-    \"\\n\\nAlice\".to_string(), \
-    \"\\n\\nObservation\".to_string(), \
-    \"\\n\\nSystem\".to_string(), \
-    \"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\".to_string()\
-    ])"))]
+    #[derivative(Default(value = "ChatRequest::default_stop_words()"))]
     stop: Array<String>,
     stream: bool,
     #[serde(alias = "logit_bias")]
@@ -116,6 +103,42 @@ pub struct ChatRequest {
     bnf_schema: Option<String>,
     sampler: NucleusParams,
     sampler_override: Option<SamplerParams>,
+}
+
+impl ChatRequest {
+    // 默认的 stop words
+    pub fn default_stop_words() -> Array<String> {
+        Array::Vec(vec![
+            "\n\nUser".to_string(),
+            "\n\nQuestion".to_string(),
+            "\n\nQ".to_string(),
+            "\n\nHuman".to_string(),
+            "\n\nBob".to_string(),
+            "\n\nAssistant".to_string(),
+            "\n\nAnswer".to_string(),
+            "\n\nA".to_string(),
+            "\n\nBot".to_string(),
+            "\n\nAlice".to_string(),
+            "\n\nObservation".to_string(),
+            "\n\nSystem".to_string(),
+            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n".to_string()
+        ])
+    }
+    // 合并默认 stop words 与请求中的 stop words，并去重
+    pub fn merge_stop_words(&mut self) {
+        let default_stops: Vec<String> = Self::default_stop_words().into();  // 利用 From trait 实现的转换
+        let mut current_stops: Vec<String> = self.stop.clone().into();        // 同样利用 From trait 进行转换
+
+        // 合并两个 Vec<String>
+        current_stops.extend(default_stops);
+
+        // 去重，确保列表中没有重复的停止词
+        current_stops.sort();
+        current_stops.dedup();
+
+        // 将合并后且去重的 Vec<String> 转换回 Array<String>
+        self.stop = Array::Vec(current_stops);
+    }
 }
 
 impl From<ChatRequest> for GenerateRequest {
@@ -367,7 +390,10 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
     )
 )]
 pub async fn chat_completions(depot: &mut Depot, req: JsonBody<ChatRequest>, res: &mut Response) {
-    let request = req.0;
+    let mut request = req.0;
+    // println!("Stop field: {:?}", request.stop);
+    request.merge_stop_words();
+    // println!("Stop field: {:?}", request.stop);
     match request.stream {
         true => respond_stream(depot, request, res).await,
         false => respond_one(depot, request, res).await,
