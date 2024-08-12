@@ -94,7 +94,21 @@ pub struct ChatRequest {
     state: StateId,
     #[derivative(Default(value = "256"))]
     max_tokens: usize,
-    #[derivative(Default(value = "Array::Item(\"\\n\\n\".into())"))]
+    #[derivative(Default(value = "Array::Vec(vec![\
+    \"\\n\\nUser\".to_string(), \
+    \"\\n\\nQuestion\".to_string(), \
+    \"\\n\\nQ\".to_string(), \
+    \"\\n\\nHuman\".to_string(), \
+    \"\\n\\nBob\".to_string(), \
+    \"\\n\\nAssistant\".to_string(), \
+    \"\\n\\nAnswer\".to_string(), \
+    \"\\n\\nA\".to_string(), \
+    \"\\n\\nBot\".to_string(), \
+    \"\\n\\nAlice\".to_string(), \
+    \"\\n\\nObservation\".to_string(), \
+    \"\\n\\nSystem\".to_string(), \
+    \"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\".to_string()\
+    ])"))]
     stop: Array<String>,
     stream: bool,
     #[serde(alias = "logit_bias")]
