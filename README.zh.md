@@ -32,8 +32,8 @@
 
 立即加入`AI00 RWKV Server`社区，体验AI的魅力！
 
-交流QQ群：30920262
-
+- 交流QQ群：30920262
+- Discord：[RWKV Ai00 Server](https://discord.com/channels/992359628979568762/1179342568908132383)
 - [什么是 AI00](docs/ai00.md)
 - [为什么只支持RWKV](docs/rwkv.md)
 

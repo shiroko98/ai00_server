@@ -34,7 +34,8 @@ If you are looking for a fast, efficient, and easy-to-use LLM API server, then `
 
 Join the `AI00 RWKV Server` community now and experience the charm of AI!
 
-QQ Group for communication: 30920262
+- QQ Group: 30920262
+- Discord: [RWKV Ai00 Server](https://discord.com/channels/992359628979568762/1179342568908132383)
 
 ### 💥Features
 
