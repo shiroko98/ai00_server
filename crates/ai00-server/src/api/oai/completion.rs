@@ -78,7 +78,7 @@ impl CompletionRequest {
             "\n\nAlice".to_string(),
             "\n\nObservation".to_string(),
             "\n\nSystem".to_string(),
-            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n".to_string()
+            "\n\n".to_string()
         ])
     }
 

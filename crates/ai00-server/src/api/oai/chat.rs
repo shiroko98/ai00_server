@@ -121,7 +121,7 @@ impl ChatRequest {
             "\n\nAlice".to_string(),
             "\n\nObservation".to_string(),
             "\n\nSystem".to_string(),
-            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n".to_string()
+            "\n\n".to_string()
         ])
     }
     // 合并默认 stop words 与请求中的 stop words，并去重
@@ -166,6 +166,7 @@ impl From<ChatRequest> for GenerateRequest {
                 format!("{role}: {content}")
             })
             .join("\n\n");
+        // println!("prompt: {:?}", prompt);
         let model_text = Vec::from(messages)
             .into_iter()
             .filter(|record| record.role == Role::Assistant)
