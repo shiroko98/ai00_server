@@ -78,7 +78,6 @@ impl CompletionRequest {
             "\n\nAlice".to_string(),
             "\n\nObservation".to_string(),
             "\n\nSystem".to_string(),
-            "\n\n".to_string()
         ])
     }
 
@@ -234,6 +233,11 @@ async fn respond_one(depot: &mut Depot, request: CompletionRequest, res: &mut Re
         match token {
             Token::Start => {}
             Token::Content(token) => {
+                // 如果生成的 token 是 "0"，则停止生成
+                if token == "0" {
+                    finish_reason = FinishReason::Stop; // 设置停止原因
+                    break;
+                }
                 text += &token;
             }
             Token::Stop(reason, counter) => {
@@ -273,10 +277,16 @@ async fn respond_stream(depot: &mut Depot, request: CompletionRequest, res: &mut
 
     let stream = token_receiver.into_stream().skip(1).map(move |token| {
         let choice = match token {
-            Token::Content(token) => PartialCompletionChoice {
-                delta: PartialCompletionRecord::Content(token),
-                ..Default::default()
-            },
+            Token::Content(token) => {
+                // 如果生成的 token 为 "0"，则立即停止生成
+                if token == "0" {
+                    return Ok(SseEvent::default().text("[DONE]"));
+                }
+                PartialCompletionChoice {
+                    delta: PartialCompletionRecord::Content(token),
+                    ..Default::default()
+                }
+            }
             Token::Stop(finish_reason, _) => PartialCompletionChoice {
                 finish_reason,
                 ..Default::default()

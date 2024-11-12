@@ -121,7 +121,6 @@ impl ChatRequest {
             "\n\nAlice".to_string(),
             "\n\nObservation".to_string(),
             "\n\nSystem".to_string(),
-            "\n\n".to_string()
         ])
     }
     // 合并默认 stop words 与请求中的 stop words，并去重
@@ -305,6 +304,11 @@ async fn respond_one(depot: &mut Depot, request: ChatRequest, res: &mut Response
         match token {
             Token::Start => {}
             Token::Content(token) => {
+                // 检查是否生成的 token 为 "0"
+                if token == "0" {
+                    finish_reason = FinishReason::Stop; // 设置停止原因
+                    break;
+                }
                 text += &token;
             }
             Token::Stop(reason, counter) => {
@@ -353,6 +357,10 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
                 ..Default::default()
             },
             Token::Content(token) => {
+                // 检查是否生成的 token 为 "0"
+                if token == "0" {
+                    return Ok(SseEvent::default().text("[DONE]"));
+                }
                 let token = match start_token {
                     true => token.trim_start().into(),
                     false => token,
