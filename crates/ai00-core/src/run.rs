@@ -32,7 +32,7 @@ use crate::{
     Environment, FinishReason, GenerateKind, GenerateRequest, ReloadRequest, Token, TokenCounter,
 };
 
-const END_OF_LINE_TOKEN: u16 = 261;
+const END_OF_LINE_TOKEN: u16 = 65463;
 const MIN_PROMPT_CACHE_TOKENS: usize = 32;
 const MAX_CACHE_ITEMS: usize = 256;
 
