@@ -55,11 +55,11 @@ pub enum Token {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenCounter {
-    #[serde(alias = "prompt_tokens")]
+    #[serde(rename = "prompt_tokens", alias = "prompt")]
     pub prompt: usize,
-    #[serde(alias = "completion_tokens")]
+    #[serde(rename = "completion_tokens", alias = "completion")]
     pub completion: usize,
-    #[serde(alias = "total_tokens")]
+    #[serde(rename = "total_tokens", alias = "total")]
     pub total: usize,
     pub duration: Duration,
 }

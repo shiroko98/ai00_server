@@ -281,13 +281,20 @@ struct PartialChatChoice {
                 "index": 0,
                 "finish_reason": null
             }
-        ]
+        ],
+        "usage": {
+            "prompt_tokens": 15,
+            "completion_tokens": 186,
+            "total_tokens": 201
+        }
     })
 ))]
 struct PartialChatResponse {
     object: String,
     model: String,
     choices: Vec<PartialChatChoice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<HashMap<String, usize>>, // 新增字段
 }
 
 async fn respond_one(depot: &mut Depot, request: ChatRequest, res: &mut Response) {
@@ -351,13 +358,16 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
 
     let (token_sender, token_receiver) = flume::unbounded();
     let request = Box::new(request.into());
+    println!("request field: {:?}", request);
     let _ = sender.send(ThreadRequest::Generate {
         request,
         tokenizer: info.tokenizer,
         sender: token_sender,
     });
 
+    let mut token_counter = TokenCounter::default();
     let mut start_token = true;
+
     let stream = token_receiver.into_stream().map(move |token| {
         let choice = match token {
             Token::Start => PartialChatChoice {
@@ -365,10 +375,6 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
                 ..Default::default()
             },
             Token::Content(token) => {
-                // // 检查是否生成的 token 为 "0"
-                // if token == "0" {
-                //     return Ok(SseEvent::default().text("[DONE]"));
-                // }
                 let token = match start_token {
                     true => token.trim_start().into(),
                     false => token,
@@ -379,11 +385,28 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
                     ..Default::default()
                 }
             }
-            Token::Stop(finish_reason, _) => PartialChatChoice {
-                finish_reason,
-                ..Default::default()
-            },
-            Token::Done => return Ok(SseEvent::default().text("[DONE]")),
+            Token::Stop(reason, counter) => {
+                token_counter = counter; // 更新 token 统计
+                PartialChatChoice {
+                    finish_reason: reason,
+                    ..Default::default()
+                }
+            }
+            Token::Done => {
+                // 在 [DONE] 之前发送包含 usage 的 JSON 数据
+                let usage_response = PartialChatResponse {
+                    object: "chat.completion.chunk".into(),
+                    model: model_name.clone(),
+                    choices: vec![], // 没有 choice 数据
+                    usage: Some(HashMap::from([
+                        ("prompt_tokens".to_string(), token_counter.prompt),
+                        ("completion_tokens".to_string(), token_counter.completion),
+                        ("total_tokens".to_string(), token_counter.total),
+                    ])),
+                };
+                let usage_json = serde_json::to_string(&usage_response).unwrap();
+                return Ok(SseEvent::default().text(usage_json));
+            }
             _ => unreachable!(),
         };
 
@@ -391,11 +414,13 @@ async fn respond_stream(depot: &mut Depot, request: ChatRequest, res: &mut Respo
             object: "chat.completion.chunk".into(),
             model: model_name.clone(),
             choices: vec![choice],
+            usage: None, // 如果不需要使用数据
         }) {
             Ok(json_text) => Ok(SseEvent::default().text(json_text)),
             Err(err) => Err(err),
         }
     });
+
     salvo::sse::stream(res, stream);
 }
 
