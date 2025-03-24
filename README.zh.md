@@ -42,7 +42,7 @@
 
 你必须[下载模型](https://huggingface.co/BlinkDL)并将其放置在`assets/models`中。
 
-你可以在这里下载已经转换好的模型： [V5](https://huggingface.co/cgisky/AI00_RWKV_V5) 或者 [V6](https://huggingface.co/cgisky/ai00_rwkv_x060)
+你可以在这里下载已经转换好的模型： [V5](https://huggingface.co/cgisky/AI00_RWKV_V5)、[V6](https://huggingface.co/cgisky/ai00_rwkv_x060)、[v7](https://huggingface.co/cgisky/RWKV-x070-Ai00/)
 
 
 ## 安装、编译和使用
@@ -97,12 +97,12 @@
 
 1. [下载pth模型](https://huggingface.co/BlinkDL)
 
-2. 克隆或下载本仓库下[convert2ai00.py](./convert2ai00.py)或[convert_safetensors.py](./convert_safetensors.py)程序，并安装相应的依赖库（`torch`和`safetensors`）
+2. 克隆或下载本仓库下[convert_safetensors.py](./assets/scripts/convert_safetensors.py)程序，并安装相应的依赖库（`torch`和`safetensors`）
 
 3. 运行上述程序，并指定输入输出路径
 
     ```bash
-    $ python convert_safetensors.py --input ./filename.pth --output ./filename.st
+    $ python assets/scripts/convert_safetensors.py --input ./filename.pth --output ./filename.st
     ```
 
 4. 如果你不想安装 Python 或 Torch，可以前往[`web-rwkv`](https://github.com/cryscan/web-rwkv/releases)并下载不依赖于 Python 或 Torch 的转换器`web-rwkv-converter`
@@ -240,19 +240,18 @@ print(ai00.continuation("i like"))
 以下是一个强行让模型输出有 "name"、"age" 和 "job" 字段的 JSON 的 BNF:
 
 ```
-<start> ::= <json_object>
-<json_object> ::= "{" <object_members> "}"
-<object_members> ::= <json_member> | <json_member> ", " <object_members>
-<json_member> ::= <json_key> ": " <json_value>
-<json_key> ::= '"' "name" '"' | '"' "age" '"' | '"' "job" '"'
-<json_value> ::= <json_string> | <json_number>
-<json_string>::='"'<content>'"'
-<content>::=<except!([escaped_literals])>|<except!([escaped_literals])><content>|'\\"'<content>|'\\"'
-<escaped_literals>::='\t'|'\n'|'\r'|'"'
-<json_number> ::= <positive_digit><digits>|'0'
-<digits>::=<digit>|<digit><digits>
-<digit>::='0'|<positive_digit>
-<positive_digit>::="1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+start ::= json_object;
+json_object ::= "{\n" object_members "\n}";
+object_members ::= json_member | json_member ",\n" object_members;
+json_member ::= "\t" json_key ": " json_value;
+json_key ::= '"' "name" '"' | '"' "age" '"' | '"' "job" '"';
+json_value ::= json_string | json_number;
+json_string ::= '"'content'"';
+content ::= #"\\w*";
+json_number ::= positive_digit digits|'0';
+digits ::= digit|digit digits;
+digit ::= '0'|positive_digit;
+positive_digit::="1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9";
 ```
 
 <image src="img/bnf.png" />

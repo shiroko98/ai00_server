@@ -53,14 +53,14 @@ fn compute_sha(path: impl AsRef<Path>, meta: &Metadata) -> Result<String> {
 
 #[derive(Debug, Clone, Deserialize, Extractible)]
 #[salvo(extract(default_source(from = "body")))]
-pub struct FileInfoRequest {
+struct FileInfoRequest {
     path: PathBuf,
     #[serde(default)]
     is_sha: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FileInfo {
+struct FileInfo {
     path: PathBuf,
     name: String,
     size: u64,
@@ -70,7 +70,7 @@ pub struct FileInfo {
 
 #[derive(Debug, Clone, Deserialize, Extractible)]
 #[salvo(extract(default_source(from = "body")))]
-pub struct UnzipRequest {
+struct UnzipRequest {
     #[serde(alias = "zip_path")]
     path: PathBuf,
     #[serde(alias = "target_dir")]
@@ -78,12 +78,12 @@ pub struct UnzipRequest {
 }
 
 #[derive(Debug, Clone, Deserialize, Extractible)]
-pub struct LoadRequest {
+struct LoadRequest {
     path: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize, Extractible)]
-pub struct SaveRequest {
+struct SaveRequest {
     path: PathBuf,
     config: crate::config::Config,
 }
@@ -256,7 +256,7 @@ pub async fn save_config(_depot: &mut Depot, request: SaveRequest) -> StatusCode
         Some(ext) if ext == "toml" => match write() {
             Ok(_) => StatusCode::OK,
             Err(err) => {
-                log::error!("failed to save config: {err}");
+                log::error!("failed to save config: {err:#?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             }
         },

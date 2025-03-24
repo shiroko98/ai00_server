@@ -1,8 +1,6 @@
-use ai00_core::{
-    reload::State,
-    run::{InitState, StateId},
-    ReloadRequest, RuntimeInfo, SaveRequest, ThreadRequest,
-};
+use std::sync::Arc;
+
+use ai00_core::{InitState, ReloadRequest, RuntimeInfo, SaveRequest, StateId, ThreadRequest};
 use futures_util::StreamExt;
 use salvo::{oapi::extract::JsonBody, prelude::*};
 use serde::Serialize;
@@ -12,8 +10,8 @@ use super::*;
 use crate::{build_path, types::ThreadSender, SLEEP};
 
 #[derive(Debug, Clone, Serialize)]
-pub struct InfoResponse {
-    reload: ReloadRequest,
+struct InfoResponse {
+    reload: Arc<ReloadRequest>,
     model: ModelInfo,
     states: Vec<InitStateInfo>,
 }
@@ -30,13 +28,13 @@ pub async fn info(depot: &mut Depot) -> Json<InfoResponse> {
     let sender = depot.obtain::<ThreadSender>().unwrap();
     let RuntimeInfo {
         reload,
-        model,
+        info: model,
         states,
         ..
     } = request_info(sender.to_owned(), SLEEP).await;
     let states = states
         .into_iter()
-        .map(|(id, InitState { name, .. })| InitStateInfo { id, name })
+        .map(|InitState { name, id, .. }| InitStateInfo { id, name })
         .collect();
     Json(InfoResponse {
         reload,
@@ -58,13 +56,13 @@ pub async fn state(depot: &mut Depot, res: &mut Response) {
     let stream = info_receiver.into_stream().map(
         |RuntimeInfo {
              reload,
-             model,
+             info: model,
              states,
              ..
          }| {
             let states = states
                 .into_iter()
-                .map(|(id, InitState { name, .. })| InitStateInfo { id, name })
+                .map(|InitState { name, id, .. }| InitStateInfo { id, name })
                 .collect();
             match serde_json::to_string(&InfoResponse {
                 reload,
@@ -127,31 +125,6 @@ pub async fn unload(depot: &mut Depot) -> StatusCode {
     let _ = sender.send(ThreadRequest::Unload);
     while try_request_info(sender.clone()).await.is_ok() {}
     StatusCode::OK
-}
-
-/// Load an initial state from the path.
-///
-/// `/api/models/state/load`.
-#[endpoint]
-pub async fn load_state(depot: &mut Depot, req: JsonBody<State>) -> StatusCode {
-    let sender = depot.obtain::<ThreadSender>().unwrap();
-    let config = depot.obtain::<crate::config::Config>().unwrap();
-    let (result_sender, result_receiver) = flume::unbounded();
-    let mut request = req.0;
-
-    request.path = match build_path(&config.model.path, &request.path) {
-        Ok(path) => path,
-        Err(_) => return StatusCode::NOT_FOUND,
-    };
-
-    let _ = sender.send(ThreadRequest::StateLoad {
-        request,
-        sender: Some(result_sender),
-    });
-    match result_receiver.recv_async().await.unwrap() {
-        true => StatusCode::OK,
-        false => StatusCode::INTERNAL_SERVER_ERROR,
-    }
 }
 
 /// Save the current model as a prefab.

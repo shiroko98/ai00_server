@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use ai00_core::{model_route, ThreadRequest};
+use ai00_core::ThreadRequest;
 use anyhow::{anyhow, bail, Result};
 use clap::{command, CommandFactory, Parser};
 use memmap2::Mmap;
@@ -153,7 +153,7 @@ async fn main() {
     log::info!("{}\tversion: {}", bin_name, version);
 
     let (sender, receiver) = flume::unbounded::<ThreadRequest>();
-    tokio::spawn(model_route(receiver));
+    tokio::spawn(ai00_core::serve(receiver));
 
     let config = {
         let path = args
@@ -257,7 +257,6 @@ async fn main() {
         .push(Router::with_path("/models/save").post(api::model::save))
         .push(Router::with_path("/models/load").post(api::model::load))
         .push(Router::with_path("/models/unload").get(api::model::unload))
-        .push(Router::with_path("/models/state/load").post(api::model::load_state))
         .push(Router::with_path("/files/unzip").post(api::file::unzip))
         .push(Router::with_path("/files/dir").post(api::file::dir))
         .push(Router::with_path("/files/ls").post(api::file::dir))
@@ -274,8 +273,8 @@ async fn main() {
         .push(Router::with_path("/oai/v1/completions").post(api::oai::completions))
         .push(Router::with_path("/oai/chat/completions").post(api::oai::chat_completions))
         .push(Router::with_path("/oai/v1/chat/completions").post(api::oai::chat_completions))
-        .push(Router::with_path("/oai/embeddings").post(api::oai::embeddings))
-        .push(Router::with_path("/oai/v1/embeddings").post(api::oai::embeddings))
+        .push(Router::with_path("/oai/states").post(api::oai::states))
+        .push(Router::with_path("/oai/v1/states").post(api::oai::states))
         .push(Router::with_path("/oai/chooses").post(api::oai::chooses))
         .push(Router::with_path("/oai/v1/chooses").post(api::oai::chooses));
     #[cfg(feature = "embed")]
@@ -309,7 +308,7 @@ async fn main() {
     // this static serve should be after `swagger`
     let app = match serve_path {
         Some(path) => app
-            .push(Router::with_path("<**path>").get(StaticDir::new(path).defaults(["index.html"]))),
+            .push(Router::with_path("{*path}").get(StaticDir::new(path).defaults(["index.html"]))),
         None => app,
     };
 
@@ -335,7 +334,7 @@ async fn main() {
         true => format!("https://{url}:{port}"),
         false => format!("http://{url}:{port}"),
     };
-    log::info!("visit WebUI at {url}");
+    log::info!("open frontend at {url}");
 
     if acme {
         let listener = TcpListener::new(ipv4_addr)

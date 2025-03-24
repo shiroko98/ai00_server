@@ -116,6 +116,8 @@ pub enum EmbeddingModel {
     ParaphraseMLMpnetBaseV2,
     /// BAAI/bge-small-zh-v1.5
     BGESmallZHV15,
+    /// lightonai/modernbert-embed-large
+    ModernBertEmbedLarge,
     /// intfloat/multilingual-e5-small
     MultilingualE5Small,
     /// intfloat/multilingual-e5-base
@@ -136,6 +138,8 @@ pub enum EmbeddingModel {
     GTELargeENV15Q,
     /// Qdrant/clip-ViT-B-32-text
     ClipVitB32,
+    /// jinaai/jina-embeddings-v2-base-code
+    JinaEmbeddingsV2BaseCode,
 }
 
 #[cfg(feature = "embed")]

@@ -1,4 +1,4 @@
-use ai00_core::{run::StateId, GenerateKind, GenerateRequest, ThreadRequest, Token};
+use ai00_core::{GenerateKind, GenerateRequest, InputState, ThreadRequest, Token};
 use futures_util::StreamExt;
 use itertools::Itertools;
 use salvo::{
@@ -26,13 +26,15 @@ use crate::{
             " San Francisco",
             " Shanghai"
         ],
+        "calibrate": false,
         "state": "00000000-0000-0000-0000-000000000000"
     })
 ))]
-pub struct ChooseRequest {
+struct ChooseRequest {
     input: Array<String>,
     choices: Vec<String>,
-    state: StateId,
+    calibrate: bool,
+    state: InputState,
 }
 
 impl From<ChooseRequest> for GenerateRequest {
@@ -40,20 +42,21 @@ impl From<ChooseRequest> for GenerateRequest {
         let ChooseRequest {
             input,
             choices,
+            calibrate,
             state,
         } = value;
         Self {
             prompt: Vec::from(input).join(""),
             max_tokens: 1,
-            kind: GenerateKind::Choose { choices },
-            state,
+            kind: GenerateKind::Choose { choices, calibrate },
+            state: state.into(),
             ..Default::default()
         }
     }
 }
 
 #[derive(Debug, Serialize, ToSchema, ToResponse)]
-pub struct ChooseData {
+struct ChooseData {
     object: String,
     index: usize,
     rank: usize,
@@ -98,7 +101,7 @@ pub struct ChooseData {
         ]
     })
 ))]
-pub struct ChooseResponse {
+struct ChooseResponse {
     object: String,
     model: String,
     data: Vec<ChooseData>,

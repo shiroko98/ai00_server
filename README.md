@@ -55,7 +55,7 @@ Join the `AI00 RWKV Server` community now and experience the charm of AI!
 ### 👻Other
 
 *   Based on the [web-rwkv](https://github.com/cryscan/web-rwkv) project
-*   Model download: [V5](https://huggingface.co/cgisky/AI00_RWKV_V5) or [V6](https://huggingface.co/cgisky/ai00_rwkv_x060)
+*   Model download: [V5](https://huggingface.co/cgisky/AI00_RWKV_V5), [V6](https://huggingface.co/cgisky/ai00_rwkv_x060), [V7](https://huggingface.co/cgisky/RWKV-x070-Ai00)
 
 ## Installation, Compilation, and Usage
 
@@ -109,10 +109,10 @@ It only supports Safetensors models with the `.st` extension now. Models saved w
 
 1. [Download the `.pth` model](https://huggingface.co/BlinkDL)
 
-2. (Recommended) Run the python script `convert2ai00.py` or `convert_safetensors.py`:
+2. (Recommended) Run the python script `convert_safetensors.py`:
 
     ```bash
-    $ python ./convert2ai00.py --input /path/to/model.pth --output /path/to/model.st
+    $ python assets/scripts/convert_safetensors.py --input /path/to/model.pth --output /path/to/model.st
     ```
 
     Requirements: Python, with `torch` and `safetensors` installed.
@@ -259,19 +259,18 @@ Since v0.5, Ai00 has a unique feature called BNF sampling. BNF forces the model 
 Here is an example BNF for JSON with fields "name", "age" and "job":
 
 ```
-<start> ::= <json_object>
-<json_object> ::= "{" <object_members> "}"
-<object_members> ::= <json_member> | <json_member> ", " <object_members>
-<json_member> ::= <json_key> ": " <json_value>
-<json_key> ::= '"' "name" '"' | '"' "age" '"' | '"' "job" '"'
-<json_value> ::= <json_string> | <json_number>
-<json_string>::='"'<content>'"'
-<content>::=<except!([escaped_literals])>|<except!([escaped_literals])><content>|'\\"'<content>|'\\"'
-<escaped_literals>::='\t'|'\n'|'\r'|'"'
-<json_number> ::= <positive_digit><digits>|'0'
-<digits>::=<digit>|<digit><digits>
-<digit>::='0'|<positive_digit>
-<positive_digit>::="1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+start ::= json_object;
+json_object ::= "{\n" object_members "\n}";
+object_members ::= json_member | json_member ",\n" object_members;
+json_member ::= "\t" json_key ": " json_value;
+json_key ::= '"' "name" '"' | '"' "age" '"' | '"' "job" '"';
+json_value ::= json_string | json_number;
+json_string ::= '"'content'"';
+content ::= #"\\w*";
+json_number ::= positive_digit digits|'0';
+digits ::= digit|digit digits;
+digit ::= '0'|positive_digit;
+positive_digit::="1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9";
 ```
 
 <image src="img/bnf.png" />

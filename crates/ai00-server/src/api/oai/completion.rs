@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use ai00_core::{
-    run::StateId, FinishReason, GenerateRequest, ThreadRequest, Token, TokenCounter, MAX_TOKENS,
+    FinishReason, GenerateRequest, InputState, ThreadRequest, Token, TokenCounter, MAX_TOKENS,
 };
 use derivative::Derivative;
 use futures_util::StreamExt;
@@ -34,22 +34,21 @@ use crate::{
         ],
         "stream": false,
         "max_tokens": 1000,
-        "sampler_override": {
+        "sampler": {
             "type": "Nucleus",
             "top_p": 0.5,
             "top_k": 128,
             "temperature": 1,
             "presence_penalty": 0.3,
             "frequency_penalty": 0.3,
-            "penalty": 400,
             "penalty_decay": 0.99654026
         },
         "state": "00000000-0000-0000-0000-000000000000"
     })
 ))]
-pub struct CompletionRequest {
+struct CompletionRequest {
     prompt: Array<String>,
-    state: StateId,
+    state: InputState,
     #[derivative(Default(value = "256"))]
     max_tokens: usize,
     #[derivative(Default(value = "CompletionRequest::default_stop_words()"))]
@@ -58,8 +57,14 @@ pub struct CompletionRequest {
     #[serde(alias = "logit_bias")]
     bias: HashMap<u16, f32>,
     bnf_schema: Option<String>,
-    sampler: NucleusParams,
-    sampler_override: Option<SamplerParams>,
+    #[serde(alias = "sampler_override")]
+    sampler: Option<SamplerParams>,
+    #[derivative(Default(value = "0.5"))]
+    top_p: f32,
+    #[derivative(Default(value = "128"))]
+    top_k: usize,
+    #[derivative(Default(value = "1.0"))]
+    temperature: f32,
 }
 
 impl CompletionRequest {
@@ -114,7 +119,9 @@ impl From<CompletionRequest> for GenerateRequest {
             max_tokens,
             stop,
             sampler,
-            sampler_override,
+            top_p,
+            top_k,
+            temperature,
             bias,
             bnf_schema,
             ..
@@ -124,10 +131,17 @@ impl From<CompletionRequest> for GenerateRequest {
         let max_tokens = max_tokens.min(MAX_TOKENS);
         let stop = stop.into();
         let bias = Arc::new(bias);
-        let sampler = match sampler_override {
+        let sampler = match sampler {
             Some(sampler) => sampler.into(),
-            None => SamplerParams::Nucleus(sampler).into(),
+            None => SamplerParams::Nucleus(NucleusParams {
+                top_p,
+                top_k,
+                temperature,
+                ..Default::default()
+            })
+            .into(),
         };
+        let state = state.into();
 
         Self {
             prompt,
@@ -143,7 +157,7 @@ impl From<CompletionRequest> for GenerateRequest {
 }
 
 #[derive(Debug, Serialize, ToSchema, ToResponse)]
-pub struct CompletionChoice {
+struct CompletionChoice {
     text: String,
     index: usize,
     finish_reason: FinishReason,
@@ -172,7 +186,7 @@ pub struct CompletionChoice {
         }
     })
 ))]
-pub struct CompletionResponse {
+struct CompletionResponse {
     object: String,
     model: String,
     choices: Vec<CompletionChoice>,
@@ -183,7 +197,7 @@ pub struct CompletionResponse {
 #[derive(Debug, Derivative, Serialize, ToSchema, ToResponse)]
 #[derivative(Default)]
 #[serde(rename_all = "snake_case")]
-pub enum PartialCompletionRecord {
+enum PartialCompletionRecord {
     Content(String),
     #[derivative(Default)]
     #[serde(untagged)]
@@ -191,7 +205,7 @@ pub enum PartialCompletionRecord {
 }
 
 #[derive(Debug, Default, Serialize, ToSchema, ToResponse)]
-pub struct PartialCompletionChoice {
+struct PartialCompletionChoice {
     delta: PartialCompletionRecord,
     index: usize,
     finish_reason: FinishReason,
@@ -213,7 +227,7 @@ pub struct PartialCompletionChoice {
         ]
     })
 ))]
-pub struct PartialCompletionResponse {
+struct PartialCompletionResponse {
     object: String,
     model: String,
     choices: Vec<PartialCompletionChoice>,
